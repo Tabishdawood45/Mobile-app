@@ -1,0 +1,17 @@
+# Ignore build directories
+/build/
+
+# Ignore local configuration files
+.idea/
+*.iml
+local.properties
+
+# Ignore Gradle files
+.gradle/
+gradle-wrapper.properties
+
+# Ignore log files
+*.log
+
+# Ignore sensitive files
+google-services.json
