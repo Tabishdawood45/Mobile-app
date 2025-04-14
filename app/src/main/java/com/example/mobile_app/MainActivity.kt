@@ -1,40 +1,15 @@
-//package com.example.mobile_app
-//import android.os.Bundle
-//import androidx.activity.ComponentActivity
-//import androidx.activity.compose.setContent
-//import androidx.compose.runtime.Composable
-//import androidx.lifecycle.viewmodel.compose.viewModel
-//import androidx.navigation.compose.NavHost
-//import androidx.navigation.compose.composable
-//import androidx.navigation.compose.rememberNavController
-//import com.example.mobile_app.components.MoodCalendar
-//import com.example.mobile_app.data.MoodEntry
-//import com.example.mobile_app.screens.HomeScreen
-//import com.example.mobile_app.screens.MoodReminderScreen
-//import com.example.mobile_app.viewmodel.MoodViewModel
-
-//class MainActivity : ComponentActivity() {
-//    override fun onCreate(savedInstanceState: Bundle?)
-//    {
-//        super.onCreate(savedInstanceState)
-//        setContent {
-//            val viewModel: MoodViewModel = viewModel()
-//            MoodCalendar { date, mood, note ->
-//                viewModel.saveMood(MoodEntry(date, mood, note))
-//            }
-//        }
-//    }
-//}
-
 package com.example.mobile_app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.mobile_app.auth.AuthManager
+import com.example.mobile_app.auth.AuthScreen
 import com.example.mobile_app.screens.HomeScreen
 import com.example.mobile_app.screens.MoodReminderScreen
 
@@ -42,7 +17,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            AppNavigation() // Call the AppNavigation composable to set up navigation
+            AppNavigation()
         }
     }
 }
@@ -50,8 +25,21 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val authManager = remember { AuthManager() }
 
-    NavHost(navController = navController, startDestination = "home_screen") {
+
+    NavHost(
+        navController = navController,
+        startDestination = if (authManager.isUserLoggedIn()) "home_screen" else "auth"
+    ) {
+        composable("auth") {
+            AuthScreen(authManager) {
+
+                navController.navigate("home_screen") {
+                    popUpTo("auth") { inclusive = true }
+                }
+            }
+        }
         composable("home_screen") {
             HomeScreen(navController)
         }
