@@ -9,9 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.mobile_app.auth.AuthManager
-import com.example.mobile_app.auth.AuthScreen
-import com.example.mobile_app.screens.HomeScreen
-import com.example.mobile_app.screens.MoodReminderScreen
+import com.example.mobile_app.screens.*
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -27,24 +25,63 @@ fun AppNavigation() {
     val navController = rememberNavController()
     val authManager = remember { AuthManager() }
 
-
     NavHost(
         navController = navController,
         startDestination = if (authManager.isUserLoggedIn()) "home_screen" else "auth"
     ) {
+        // Entry screen: choose login or signup
         composable("auth") {
-            AuthScreen(authManager) {
+            AuthScreen(navController)
+        }
 
+        // Login screen
+        composable("login_screen") {
+            LoginScreen(authManager, navController) {
                 navController.navigate("home_screen") {
                     popUpTo("auth") { inclusive = true }
                 }
             }
         }
+
+        // Signup screen
+        composable("signup_screen") {
+            SignupScreen(authManager, navController) {
+                navController.navigate("home_screen") {
+                    popUpTo("auth") { inclusive = true }
+                }
+            }
+        }
+
+        // Home screen
         composable("home_screen") {
             HomeScreen(navController)
         }
+
+        // Mood & Reminder screen
         composable("mood_reminder_screen") {
             MoodReminderScreen()
         }
+
+        composable("exercises_screen") {
+            ExercisesScreen()
+        }
+
+        composable("articles_screen") {
+            ArticleScreen()
+        }
+
+        composable("journal_note_screen") {
+            JournalNoteScreen()
+        }
+        composable("settings") {
+            SettingsScreen()
+        }
+        composable("about") {
+            AboutUsScreen()
+        }
+        composable("user") {
+            UserScreen(navController)
+        }
+
     }
 }

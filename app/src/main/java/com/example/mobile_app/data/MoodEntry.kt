@@ -1,4 +1,5 @@
 package com.example.mobile_app.data
+
 import java.time.LocalDate
 
 data class MoodEntry(
@@ -6,3 +7,4 @@ data class MoodEntry(
     val mood: String,
     val note: String
 )
+

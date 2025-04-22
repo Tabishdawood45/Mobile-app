@@ -12,4 +12,3 @@ class MoodViewModel : ViewModel() {
         repository.saveMood(entry)
     }
 }
-

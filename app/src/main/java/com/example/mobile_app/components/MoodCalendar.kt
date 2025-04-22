@@ -129,7 +129,7 @@ fun MoodCalendar(onMoodSelected: (LocalDate, String, String) -> Unit) {
             }
         }
     }
-        // Mood Dialog
+    // Mood Dialog
     if (showMoodDialog) {
         AlertDialog(
             onDismissRequest = { showMoodDialog = false },
@@ -306,7 +306,7 @@ fun setCustomReminder(context: Context, date: LocalDate, note: String, hour: Int
             date.year,
             date.monthValue - 1,
             date.dayOfMonth,
-            hour, minute, 0 // Set the reminder time to the user-selected hour and minute
+            hour, minute, 0
         )
     }
 
@@ -322,5 +322,35 @@ fun setCustomReminder(context: Context, date: LocalDate, note: String, hour: Int
     }
 }
 
+
+@Composable
+fun ReminderCard(time: String, message: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(6.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Reminder Time: $time",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = "Message: $message",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier
+                    .fillMaxWidth(),
+                softWrap = true
+            )
+        }
+    }
+}
 
 

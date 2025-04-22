@@ -14,4 +14,5 @@ gradle-wrapper.properties
 *.log
 
 # Ignore sensitive files
+/google-services.json
 google-services.json
