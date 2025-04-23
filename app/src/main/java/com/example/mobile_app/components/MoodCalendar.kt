@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,8 +24,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.mobile_app.data.NoteDataStore
 import com.example.mobile_app.notifications.ReminderReceiver
-import com.example.mobile_app.screens.AboutUsScreen
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -35,23 +37,34 @@ fun MoodCalendar(onMoodSelected: (LocalDate, String, String) -> Unit) {
     val context = LocalContext.current
     val today = remember { LocalDate.now() }
     var selectedDate by remember { mutableStateOf(today) }
-    var selectedMood by remember { mutableStateOf<String?>(null) }
-    var showMoodDialog by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
     var reminderHour by remember { mutableIntStateOf(12) }
     var reminderMinute by remember { mutableIntStateOf(0) }
-    val storedMoods = remember { mutableStateMapOf<LocalDate, String>() }
-    val storedNotes = remember { mutableStateMapOf<LocalDate, String>() }
+    val storedNotes = remember { mutableStateMapOf<LocalDate, MutableList<String>>() }
+    val storedReminders = remember { mutableStateMapOf<LocalDate, MutableList<Pair<Int, Int>>>() }
     var noteText by remember { mutableStateOf(TextFieldValue("")) }
+    val noteStore = remember { NoteDataStore(context) }
+    val coroutineScope = rememberCoroutineScope()
 
-//    val moodMessages = mapOf(
-//        "happy" to "Stay happy and positive!",
-//        "sad" to "It's okay to feel down. Try to get happy!",
-//        "neutral" to "You're doing great. Keep going!"
-//    )
-//
-//    val selectedQuote = moodMessages[selectedMood] ?: "Choose your mood"
+    LaunchedEffect(Unit) {
+        noteStore.getAllNotes().collect { notes ->
+            storedNotes.clear()
+            notes.forEach { (key, value) ->
+                storedNotes[LocalDate.parse(key)] = mutableListOf(value)
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        noteStore.getAllReminderTimes().collect { reminders ->
+            storedReminders.clear()
+            reminders.forEach { (dateStr, time) ->
+                val date = LocalDate.parse(dateStr)
+                storedReminders[date] = mutableListOf(time)
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -62,16 +75,20 @@ fun MoodCalendar(onMoodSelected: (LocalDate, String, String) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            "Mood & Reminder",
+            "Notes & Reminder",
             style = MaterialTheme.typography.headlineMedium.copy(color = Color(0xFF2E7D32))
         )
 
+        // Calendar View
         CalendarView(
             selectedDate = selectedDate,
             storedNotes = storedNotes,
             onDateSelected = { date -> selectedDate = date }
         )
 
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Buttons to set reminders and add notes
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.fillMaxWidth()
@@ -84,14 +101,6 @@ fun MoodCalendar(onMoodSelected: (LocalDate, String, String) -> Unit) {
                 Text("Set Reminder")
             }
 
-//            Button(
-//                onClick = { showMoodDialog = true },
-//                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81C784)),
-//                modifier = Modifier.weight(1f)
-//            ) {
-//                Text("Select Mood")
-//            }
-
             Button(
                 onClick = { showNoteDialog = true },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81C784)),
@@ -101,43 +110,121 @@ fun MoodCalendar(onMoodSelected: (LocalDate, String, String) -> Unit) {
             }
         }
 
-//        selectedMood?.let {
-//            Text(
-//                text = "💡 $selectedQuote",
-//                modifier = Modifier.padding(top = 8.dp),
-//                style = MaterialTheme.typography.bodyLarge.copy(color = Color(0xFF2E7D32))
-//            )
-//        }
+        // Spacer between buttons and content
+        Spacer(modifier = Modifier.height(16.dp))
 
-        if (storedNotes.isNotEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(top = 16.dp)
-            ) {
-                Text(
-                    "📒 Your Notes:",
-                    style = MaterialTheme.typography.titleMedium.copy(color = Color(0xFF2E7D32)),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+        // Scrollable content for notes and reminders
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+        ) {
 
-                storedNotes.toSortedMap().forEach { (date, note) ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFA5D6A7)),
-                        elevation = CardDefaults.cardElevation(6.dp)
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "🗓️ ${date.format(DateTimeFormatter.ofPattern("MMM dd"))}",
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(note, style = MaterialTheme.typography.bodyMedium)
+            // Display Notes if available
+            if (storedNotes.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                ) {
+                    Text(
+                        "📒 Your Notes:",
+                        style = MaterialTheme.typography.titleMedium.copy(color = Color(0xFF2E7D32)),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    storedNotes.toSortedMap().forEach { (date, notes) ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFA5D6A7)),
+                            elevation = CardDefaults.cardElevation(6.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "🗓️ ${date.format(DateTimeFormatter.ofPattern("MMM dd"))}",
+                                    style = MaterialTheme.typography.labelLarge
+                                )
+                                notes.forEach { note ->
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(note, style = MaterialTheme.typography.bodyMedium)
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            storedNotes[date]?.clear() // Clear all notes for that date
+                                            coroutineScope.launch {
+                                                noteStore.deleteNote(date.toString())
+                                            }
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE57373))
+                                    ) {
+                                        Text("Delete", color = Color.White)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Display Reminders if available
+            if (storedReminders.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp)
+                ) {
+                    Text(
+                        "⏰ Your Reminders:",
+                        style = MaterialTheme.typography.titleMedium.copy(color = Color(0xFF2E7D32)),
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    storedReminders.toSortedMap().forEach { (date, reminders) ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFDCEDC8)),
+                            elevation = CardDefaults.cardElevation(6.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                reminders.forEach { timePair ->
+                                    val timeStr = String.format("%02d:%02d", timePair.first, timePair.second)
+                                    Text(
+                                        text = "🗓️ ${date.format(DateTimeFormatter.ofPattern("MMM dd"))} at ⏰ $timeStr",
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    Button(
+                                        onClick = {
+                                            storedReminders.remove(date)
+                                            coroutineScope.launch {
+                                                noteStore.deleteReminderTime(date.toString())
+                                            }
+                                            cancelReminder(context, date)
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE57373))
+                                    ) {
+                                        Text("Delete", color = Color.White)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -145,47 +232,15 @@ fun MoodCalendar(onMoodSelected: (LocalDate, String, String) -> Unit) {
         }
     }
 
-    // Mood Dialog
-//    if (showMoodDialog) {
-//        AlertDialog(
-//            onDismissRequest = { showMoodDialog = false },
-//            title = { Text("Select Your Mood 😊") },
-//            text = {
-//                Row(
-//                    horizontalArrangement = Arrangement.SpaceEvenly,
-//                    modifier = Modifier.fillMaxWidth()
-//                ) {
-//                    listOf("😀", "😐", "😞").forEach { emoji ->
-//                        Text(
-//                            text = emoji,
-//                            modifier = Modifier
-//                                .clickable {
-//                                    selectedMood = when (emoji) {
-//                                        "😀" -> "happy"
-//                                        "😐" -> "neutral"
-//                                        "😞" -> "sad"
-//                                        else -> "neutral"
-//                                    }
-//                                    storedMoods[selectedDate] = emoji
-//                                    showMoodDialog = false
-//                                    onMoodSelected(selectedDate, emoji, storedNotes[selectedDate] ?: "")
-//                                }
-//                                .padding(8.dp),
-//                            style = MaterialTheme.typography.headlineLarge
-//                        )
-//                    }
-//                }
-//            },
-//            confirmButton = {}
-//        )
-//    }
-
     // Time Picker
     if (showTimePicker) {
         android.app.TimePickerDialog(context, { _, hour, minute ->
             reminderHour = hour
             reminderMinute = minute
             setCustomReminder(context, selectedDate, "Reminder!!", hour, minute)
+            coroutineScope.launch {
+                noteStore.saveReminderTime(selectedDate.toString(), hour, minute)
+            }
             showTimePicker = false
         }, reminderHour, reminderMinute, false).show()
     }
@@ -206,7 +261,11 @@ fun MoodCalendar(onMoodSelected: (LocalDate, String, String) -> Unit) {
             },
             confirmButton = {
                 Button(onClick = {
-                    storedNotes[selectedDate] = noteText.text
+                    // Add new note to the list
+                    storedNotes[selectedDate]?.add(noteText.text) ?: storedNotes.put(selectedDate, mutableListOf(noteText.text))
+                    coroutineScope.launch {
+                        noteStore.saveNote(selectedDate.toString(), noteText.text)
+                    }
                     setNoteReminder(context, selectedDate, noteText.text)
                     showNoteDialog = false
                 }) { Text("Save") }
@@ -218,8 +277,11 @@ fun MoodCalendar(onMoodSelected: (LocalDate, String, String) -> Unit) {
     }
 }
 
+
+
+
 @Composable
-fun CalendarView(selectedDate: LocalDate, storedNotes: Map<LocalDate, String>, onDateSelected: (LocalDate) -> Unit) {
+fun CalendarView(selectedDate: LocalDate, storedNotes: SnapshotStateMap<LocalDate, MutableList<String>>, onDateSelected: (LocalDate) -> Unit) {
 
     val currentMonth = remember { YearMonth.now() }
     val firstDayOfMonth = currentMonth.atDay(1)
@@ -342,6 +404,20 @@ fun setCustomReminder(context: Context, date: LocalDate, note: String, hour: Int
         Toast.makeText(context, "Reminder time is in the past. Set for next day.", Toast.LENGTH_SHORT).show()
     }
 }
+
+fun cancelReminder(context: Context, date: LocalDate) {
+    val intent = Intent(context, ReminderReceiver::class.java)
+    val pendingIntent = PendingIntent.getBroadcast(
+        context,
+        date.hashCode(),
+        intent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+    alarmManager.cancel(pendingIntent)
+    Toast.makeText(context, "Reminder for ${date.format(DateTimeFormatter.ofPattern("MMM dd"))} cancelled!", Toast.LENGTH_SHORT).show()
+}
+
 
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
