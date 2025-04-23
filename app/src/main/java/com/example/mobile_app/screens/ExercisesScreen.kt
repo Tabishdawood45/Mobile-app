@@ -1,5 +1,6 @@
 package com.example.mobile_app.screens
-
+import android.annotation.SuppressLint
+import android.app.Activity
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
@@ -34,13 +35,35 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.graphicsLayer
-
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
+import android.content.Context
+import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.util.Log
+import android.widget.Toast
+import androidx.annotation.RequiresApi
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 
+
+@RequiresApi(Build.VERSION_CODES.Q)
 @Composable
 fun ExercisesScreen() {
     var selectedExercise by remember { mutableStateOf("") }
@@ -76,11 +99,16 @@ fun ExercisesScreen() {
             ExerciseCard("🌬️ Muscle Relaxation", completedExercises.contains("relaxation"), cardGreen) {
                 selectedExercise = "relaxation"
             }
+            ExerciseCard("👣 Step Counter Exercise", completedExercises.contains("step count"), cardGreen) {
+                selectedExercise = "step count"
+            }
         } else {
             when (selectedExercise) {
                 "breathing" -> BreathingExercise(deepGreen)
                 "grounding" -> GroundingExercise(deepGreen)
                 "relaxation" -> MuscleRelaxationGuide(deepGreen)
+                "step count" -> StepCounterWithGoal(deepGreen)
+
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -265,6 +293,176 @@ fun MuscleRelaxationGuide(deepGreen: Color) {
             "Breathe deeply between each step. You're doing great!",
             style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF2E7D32)),
             modifier = Modifier.padding(8.dp)
+        )
+    }
+}
+
+@SuppressLint("ServiceCast")
+@RequiresApi(Build.VERSION_CODES.Q)
+@Composable
+fun StepCounterWithGoal(deepGreen: Color) {
+    val context = LocalContext.current
+    val sensorManager = remember { context.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
+    val stepDetectorSensor = remember { sensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR) }
+    var totalSteps by remember { mutableFloatStateOf(0f) }
+    var stepGoal by remember { mutableIntStateOf(1000) }
+    var goalReached by remember { mutableStateOf(false) }
+    var goalSetMessage by remember { mutableStateOf(false) }
+
+    val activity = context as? Activity
+    val permission = android.Manifest.permission.ACTIVITY_RECOGNITION
+
+
+    LaunchedEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(activity!!, arrayOf(permission), 0)
+        }
+    }
+
+    // Handle goal reached vibration
+    LaunchedEffect(goalReached) {
+        if (goalReached) {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val manager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                manager.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+            }
+
+            vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
+
+            Toast.makeText(context, "Goal reached! 🎉", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    // Sensor listener
+    DisposableEffect(Unit) {
+        val stepListener = object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent?) {
+                if (event?.sensor?.type == Sensor.TYPE_STEP_DETECTOR) {
+                    totalSteps += 1f
+
+                    if (!goalReached && totalSteps >= stepGoal) {
+                        goalReached = true
+                    }
+
+                    Log.d("StepDebug", "Step detected! Total: $totalSteps")
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+        }
+
+        stepDetectorSensor?.let {
+            sensorManager.registerListener(stepListener, it, SensorManager.SENSOR_DELAY_UI)
+        }
+
+        onDispose {
+            sensorManager.unregisterListener(stepListener)
+        }
+    }
+
+    // UI
+    Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = "🚶 Step Counter",
+            style = MaterialTheme.typography.headlineSmall.copy(color = deepGreen)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        var goalInput by remember { mutableStateOf("") }
+
+        Text(
+            text = "Set your step goal:",
+            style = MaterialTheme.typography.bodyLarge.copy(color = deepGreen)
+        )
+
+        OutlinedTextField(
+            value = goalInput,
+            onValueChange = { goalInput = it },
+            label = { Text("Step Goal") },
+            keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                goalInput.toIntOrNull()?.let {
+                    stepGoal = it
+                    goalReached = false
+                    totalSteps = 0f
+                    goalSetMessage = true
+                }
+                goalInput = ""
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = deepGreen)
+        ) {
+            Text("Set Goal", color = Color.White)
+        }
+
+
+        if (goalSetMessage) {
+            LaunchedEffect(goalSetMessage) {
+                Toast.makeText(context, "Step goal set!", Toast.LENGTH_SHORT).show()
+                delay(2000)
+                goalSetMessage = false
+            }
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "You’ve taken ${totalSteps.toInt()} steps.",
+            style = MaterialTheme.typography.bodyLarge.copy(color = deepGreen)
+        )
+
+        if (goalReached) {
+            Spacer(modifier = Modifier.height(24.dp))
+            AnimatedStepGoalReached(deepGreen)
+        } else {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Keep going to hit your step goal!",
+                style = MaterialTheme.typography.bodyMedium.copy(color = deepGreen)
+            )
+        }
+    }
+}
+
+
+
+@Composable
+fun AnimatedStepGoalReached(color: Color) {
+    val infiniteTransition = rememberInfiniteTransition()
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "GoalReachedAnimation"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .graphicsLayer(alpha = alpha)
+            .background(color.copy(alpha = 0.1f), shape = RoundedCornerShape(16.dp))
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "🎉 Congratulations! You've reached your step goal!",
+            style = MaterialTheme.typography.bodyLarge.copy(
+                color = color,
+                fontWeight = FontWeight.Bold
+            )
         )
     }
 }
