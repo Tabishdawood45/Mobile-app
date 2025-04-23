@@ -11,6 +11,12 @@ import androidx.navigation.compose.rememberNavController
 import com.example.mobile_app.auth.AuthManager
 import com.example.mobile_app.screens.*
 
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
+import java.net.URLEncoder
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,8 +73,22 @@ fun AppNavigation() {
         }
 
         composable("articles_screen") {
-            ArticleScreen()
+            ArticleScreen(onArticleClick = { url ->
+                val encodedUrl = URLEncoder.encode(url, StandardCharsets.UTF_8.toString())
+                navController.navigate("article_detail_screen/$encodedUrl")
+            })
         }
+
+        composable(
+            "article_detail_screen/{url}",
+            arguments = listOf(navArgument("url") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val url = backStackEntry.arguments?.getString("url")?.let {
+                URLDecoder.decode(it, StandardCharsets.UTF_8.toString())
+            } ?: ""
+            ArticleDetailScreen(url)
+        }
+
 
         composable("journal_note_screen") {
             JournalNoteScreen()
@@ -81,6 +101,9 @@ fun AppNavigation() {
         }
         composable("user") {
             UserScreen(navController)
+        }
+        composable("mood_tracker_screen") {
+            MoodTrackerScreen()
         }
 
     }

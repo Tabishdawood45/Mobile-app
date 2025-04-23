@@ -8,7 +8,7 @@ import com.example.mobile_app.repository.MoodRepository
 class MoodViewModel : ViewModel() {
     private val repository = MoodRepository()
 
-    fun saveMood(entry: MoodEntry) {
+    fun selectMood(entry: MoodEntry) {
         repository.saveMood(entry)
     }
 }

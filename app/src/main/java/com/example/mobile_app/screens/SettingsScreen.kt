@@ -1,4 +1,5 @@
 package com.example.mobile_app.screens
+
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,11 +20,14 @@ import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.tooling.preview.Preview
+import com.google.firebase.auth.EmailAuthProvider
+
 @Composable
 fun SettingsScreen() {
     val primaryGreen = Color(0xFF388E3C)
     val lightGreenBackground = Color(0xFFE6F7E1)
 
+    var oldPassword by remember { mutableStateOf("") }
     var newUsername by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
@@ -60,6 +64,17 @@ fun SettingsScreen() {
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
 
+                    // Old password field
+                    OutlinedTextField(
+                        value = oldPassword,
+                        onValueChange = { oldPassword = it },
+                        label = { Text("Old Password") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                    )
+
                     OutlinedTextField(
                         value = newUsername,
                         onValueChange = { newUsername = it },
@@ -93,7 +108,8 @@ fun SettingsScreen() {
                         Button(
                             onClick = {
                                 isLoading = true
-                                updateUserProfile(newUsername, newPassword) { _, message ->
+                                // Pass the old password to validate it before making updates
+                                updateUserProfile(oldPassword, newUsername, newPassword) { _, message ->
                                     isLoading = false
                                     updateMessage = message
                                     Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -119,38 +135,52 @@ fun SettingsScreen() {
         }
     }
 }
-
-fun updateUserProfile(username: String, password: String, callback: (Boolean, String) -> Unit) {
+fun updateUserProfile(oldPassword: String, username: String, password: String, callback: (Boolean, String) -> Unit) {
     val user = FirebaseAuth.getInstance().currentUser
 
-    // Update username (display name)
-    val profileUpdates = UserProfileChangeRequest.Builder()
-        .setDisplayName(username)
-        .build()
-
-    var updateSuccess = true
-    var message = "Profile updated successfully."
-
-    user?.updateProfile(profileUpdates)?.addOnCompleteListener { task ->
-        if (!task.isSuccessful) {
-            updateSuccess = false
-            message = "Failed to update username."
-        }
+    if (user == null) {
+        callback(false, "No user logged in.")
+        return
     }
 
-    // Update password
-    if (password.isNotEmpty()) {
-        user?.updatePassword(password)?.addOnCompleteListener { task ->
-            if (!task.isSuccessful) {
-                updateSuccess = false
-                message = "Failed to update password."
+    // Step 1: Re-authenticate the user with their old password
+    val credential = EmailAuthProvider.getCredential(user.email!!, oldPassword)
+
+    // Re-authenticate with the old password
+    user.reauthenticate(credential).addOnCompleteListener { authTask ->
+        if (authTask.isSuccessful) {
+            // Step 2: Update the username (display name)
+            val profileUpdates = UserProfileChangeRequest.Builder()
+                .setDisplayName(username)
+                .build()
+
+            var updateSuccess = true
+            var message = "Profile updated successfully."
+
+            user.updateProfile(profileUpdates).addOnCompleteListener { task ->
+                if (!task.isSuccessful) {
+                    updateSuccess = false
+                    message = "Failed to update username."
+                }
             }
+
+            // Step 3: Update the password
+            if (password.isNotEmpty()) {
+                user.updatePassword(password).addOnCompleteListener { task ->
+                    if (!task.isSuccessful) {
+                        updateSuccess = false
+                        message = "Failed to update password."
+                    }
+                }
+            }
+
+            callback(updateSuccess, message)
+        } else {
+            callback(false, "Old password is incorrect.")
         }
     }
-
-
-    callback(updateSuccess, message)
 }
+
 
 @Preview(showBackground = true)
 @Composable

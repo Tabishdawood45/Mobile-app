@@ -1,4 +1,5 @@
 package com.example.mobile_app.components
+
 import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -20,14 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.mobile_app.notifications.ReminderReceiver
+import com.example.mobile_app.screens.AboutUsScreen
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
-
-
 
 @Composable
 fun MoodCalendar(onMoodSelected: (LocalDate, String, String) -> Unit) {
@@ -44,81 +45,95 @@ fun MoodCalendar(onMoodSelected: (LocalDate, String, String) -> Unit) {
     val storedNotes = remember { mutableStateMapOf<LocalDate, String>() }
     var noteText by remember { mutableStateOf(TextFieldValue("")) }
 
-    val moodMessages = mapOf(
-        "happy" to "Stay happy and positive!",
-        "sad" to "It's okay to feel down. Try to get happy!",
-        "neutral" to "You're doing great. Keep going!"
-    )
-
-    val selectedQuote = moodMessages[selectedMood] ?: "Choose your mood"
+//    val moodMessages = mapOf(
+//        "happy" to "Stay happy and positive!",
+//        "sad" to "It's okay to feel down. Try to get happy!",
+//        "neutral" to "You're doing great. Keep going!"
+//    )
+//
+//    val selectedQuote = moodMessages[selectedMood] ?: "Choose your mood"
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(16.dp)
+            .background(color = Color(0xFFF1F8E9)), // subtle green background
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Mood & Reminder", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "Mood & Reminder",
+            style = MaterialTheme.typography.headlineMedium.copy(color = Color(0xFF2E7D32))
+        )
 
-        // Calendar always visible
         CalendarView(
             selectedDate = selectedDate,
             storedNotes = storedNotes,
-            onDateSelected = { date ->
-                selectedDate = date
-            }
+            onDateSelected = { date -> selectedDate = date }
         )
 
-        // Reminder Button
-        Button(onClick = { showTimePicker = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("Set Reminder")
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Button(
+                onClick = { showTimePicker = true },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81C784)),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Set Reminder")
+            }
+
+//            Button(
+//                onClick = { showMoodDialog = true },
+//                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81C784)),
+//                modifier = Modifier.weight(1f)
+//            ) {
+//                Text("Select Mood")
+//            }
+
+            Button(
+                onClick = { showNoteDialog = true },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF81C784)),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Add Note")
+            }
         }
 
-        // Mood Selection Button
-        Button(onClick = { showMoodDialog = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("Select Mood")
-        }
-
-        // Add Note Button
-        Button(onClick = { showNoteDialog = true }, modifier = Modifier.fillMaxWidth()) {
-            Text("Add a Note")
-        }
-
-        // Display today's Mood Quote
-        selectedMood?.let {
-            Text(
-                text = selectedQuote,
-                modifier = Modifier.padding(top = 8.dp),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.secondary
-            )
-        }
-
-        // Show Note for selectedDate
-        val scrollState = rememberScrollState()
+//        selectedMood?.let {
+//            Text(
+//                text = "💡 $selectedQuote",
+//                modifier = Modifier.padding(top = 8.dp),
+//                style = MaterialTheme.typography.bodyLarge.copy(color = Color(0xFF2E7D32))
+//            )
+//        }
 
         if (storedNotes.isNotEmpty()) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(scrollState)
-                    .padding(top = 8.dp)
+                    .verticalScroll(rememberScrollState())
+                    .padding(top = 16.dp)
             ) {
-                Text("Your Notes:", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "📒 Your Notes:",
+                    style = MaterialTheme.typography.titleMedium.copy(color = Color(0xFF2E7D32)),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
 
-                // Show all notes sorted by date
                 storedNotes.toSortedMap().forEach { (date, note) ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp),
-                        elevation = CardDefaults.cardElevation(4.dp),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFA5D6A7)),
+                        elevation = CardDefaults.cardElevation(6.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                "Note for ${date.format(DateTimeFormatter.ofPattern("MMM dd"))}",
+                                text = "🗓️ ${date.format(DateTimeFormatter.ofPattern("MMM dd"))}",
                                 style = MaterialTheme.typography.labelLarge
                             )
                             Spacer(modifier = Modifier.height(4.dp))
@@ -129,35 +144,41 @@ fun MoodCalendar(onMoodSelected: (LocalDate, String, String) -> Unit) {
             }
         }
     }
+
     // Mood Dialog
-    if (showMoodDialog) {
-        AlertDialog(
-            onDismissRequest = { showMoodDialog = false },
-            title = { Text("Select Your Mood") },
-            text = {
-                Row(horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
-                    listOf("😀", "😐", "😞").forEach { mood ->
-                        Text(
-                            text = mood,
-                            modifier = Modifier.clickable {
-                                selectedMood = when (mood) {
-                                    "😀" -> "happy"
-                                    "😐" -> "neutral"
-                                    "😞" -> "sad"
-                                    else -> "neutral"
-                                }
-                                storedMoods[selectedDate] = mood
-                                showMoodDialog = false
-                                onMoodSelected(selectedDate, mood, storedNotes[selectedDate] ?: "")
-                            },
-                            style = MaterialTheme.typography.headlineMedium
-                        )
-                    }
-                }
-            },
-            confirmButton = {}
-        )
-    }
+//    if (showMoodDialog) {
+//        AlertDialog(
+//            onDismissRequest = { showMoodDialog = false },
+//            title = { Text("Select Your Mood 😊") },
+//            text = {
+//                Row(
+//                    horizontalArrangement = Arrangement.SpaceEvenly,
+//                    modifier = Modifier.fillMaxWidth()
+//                ) {
+//                    listOf("😀", "😐", "😞").forEach { emoji ->
+//                        Text(
+//                            text = emoji,
+//                            modifier = Modifier
+//                                .clickable {
+//                                    selectedMood = when (emoji) {
+//                                        "😀" -> "happy"
+//                                        "😐" -> "neutral"
+//                                        "😞" -> "sad"
+//                                        else -> "neutral"
+//                                    }
+//                                    storedMoods[selectedDate] = emoji
+//                                    showMoodDialog = false
+//                                    onMoodSelected(selectedDate, emoji, storedNotes[selectedDate] ?: "")
+//                                }
+//                                .padding(8.dp),
+//                            style = MaterialTheme.typography.headlineLarge
+//                        )
+//                    }
+//                }
+//            },
+//            confirmButton = {}
+//        )
+//    }
 
     // Time Picker
     if (showTimePicker) {
@@ -203,7 +224,7 @@ fun CalendarView(selectedDate: LocalDate, storedNotes: Map<LocalDate, String>, o
     val currentMonth = remember { YearMonth.now() }
     val firstDayOfMonth = currentMonth.atDay(1)
     val daysInMonth = currentMonth.lengthOfMonth()
-    val firstDayOfWeek = (firstDayOfMonth.dayOfWeek.value + 6) % 7// 0 = Sunday, 1 = Monday, etc.
+    val firstDayOfWeek = (firstDayOfMonth.dayOfWeek.value + 6) % 7 // 0 = Sunday, 1 = Monday, etc.
     val today = LocalDate.now()
 
     val weekDays = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -236,13 +257,13 @@ fun CalendarView(selectedDate: LocalDate, storedNotes: Map<LocalDate, String>, o
                         .padding(4.dp)
                         .size(48.dp)
                         .background(
-                            when {
-                                isToday -> Color(0xFFB3E5FC) // light blue for today
-                                isSelected -> Color(0xFFC8E6C9) // light green for selected
-                                storedNotes.containsKey(date) -> Color.Yellow
-                                else -> Color.LightGray
+                            color = when {
+                                isToday -> Color(0xFFB2FF59) // lime green for today
+                                isSelected -> Color(0xFF81C784) // darker green for selection
+                                storedNotes.containsKey(date) -> Color(0xFFFFFF8D) // yellow for notes
+                                else -> Color(0xFFE8F5E9) // lightest green for others
                             },
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(12.dp)
                         )
                         .clickable { onDateSelected(date) },
                     contentAlignment = Alignment.Center
@@ -322,35 +343,10 @@ fun setCustomReminder(context: Context, date: LocalDate, note: String, hour: Int
     }
 }
 
-
+@Preview(showBackground = true, showSystemUi = true)
 @Composable
-fun ReminderCard(time: String, message: String) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(6.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "Reminder Time: $time",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                text = "Message: $message",
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier
-                    .fillMaxWidth(),
-                softWrap = true
-            )
-        }
+fun MoodCalendarPreview() {
+    MaterialTheme {
+        MoodCalendar { _, _, _ -> }
     }
 }
-
-

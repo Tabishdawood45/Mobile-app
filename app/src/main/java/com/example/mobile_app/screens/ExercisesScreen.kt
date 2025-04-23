@@ -39,42 +39,48 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.text.font.FontWeight
 
 @Composable
 fun ExercisesScreen() {
     var selectedExercise by remember { mutableStateOf("") }
     val completedExercises = remember { mutableStateListOf<String>() }
 
+    val softGreen = Color(0xFFE8F5E9)
+    val deepGreen = Color(0xFF2E7D32)
+    val cardGreen = Color(0xFFA5D6A7)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .background(softGreen)
             .verticalScroll(rememberScrollState())
-            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 16.dp, vertical = 20.dp)
     ) {
         Text(
             "Mental Health Exercises",
-            style = MaterialTheme.typography.headlineLarge.copy(
-                color = MaterialTheme.colorScheme.primary
+            style = MaterialTheme.typography.headlineMedium.copy(
+                color = deepGreen,
+                fontWeight = FontWeight.Bold
             )
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         if (selectedExercise.isEmpty()) {
-            ExerciseCard("🧘 Breathing Exercise", completedExercises.contains("breathing")) {
+            ExerciseCard("🧘 Breathing Exercise", completedExercises.contains("breathing"), cardGreen) {
                 selectedExercise = "breathing"
             }
-            ExerciseCard("✍️ Grounding Exercise", completedExercises.contains("grounding")) {
+            ExerciseCard("✍️ Grounding Exercise", completedExercises.contains("grounding"), cardGreen) {
                 selectedExercise = "grounding"
             }
-            ExerciseCard("🌬️ Muscle Relaxation", completedExercises.contains("relaxation")) {
+            ExerciseCard("🌬️ Muscle Relaxation", completedExercises.contains("relaxation"), cardGreen) {
                 selectedExercise = "relaxation"
             }
         } else {
             when (selectedExercise) {
-                "breathing" -> BreathingExercise()
-                "grounding" -> GroundingExercise()
-                "relaxation" -> MuscleRelaxationGuide()
+                "breathing" -> BreathingExercise(deepGreen)
+                "grounding" -> GroundingExercise(deepGreen)
+                "relaxation" -> MuscleRelaxationGuide(deepGreen)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -87,7 +93,7 @@ fun ExercisesScreen() {
                     selectedExercise = ""
                 },
                 modifier = Modifier.align(Alignment.CenterHorizontally),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                colors = ButtonDefaults.buttonColors(containerColor = deepGreen)
             ) {
                 Text("✅ Done! Back to Menu", color = Color.White)
             }
@@ -96,14 +102,15 @@ fun ExercisesScreen() {
 }
 
 @Composable
-fun ExerciseCard(title: String, isCompleted: Boolean = false, onClick: () -> Unit) {
+fun ExerciseCard(title: String, isCompleted: Boolean = false, backgroundColor: Color, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 12.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(10.dp)
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        elevation = CardDefaults.cardElevation(8.dp),
+        shape = RoundedCornerShape(20.dp)
     ) {
         Row(
             modifier = Modifier
@@ -114,14 +121,14 @@ fun ExerciseCard(title: String, isCompleted: Boolean = false, onClick: () -> Uni
         ) {
             Text(
                 title,
-                style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground),
+                style = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
                 modifier = Modifier.weight(1f)
             )
             if (isCompleted) {
                 Icon(
                     imageVector = Icons.Filled.CheckCircle,
                     contentDescription = "Completed",
-                    tint = Color.Green,
+                    tint = Color.White,
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -130,7 +137,7 @@ fun ExerciseCard(title: String, isCompleted: Boolean = false, onClick: () -> Uni
 }
 
 @Composable
-fun BreathingExercise() {
+fun BreathingExercise(textColor: Color) {
     var isInhaling by remember { mutableStateOf(true) }
     val scale by animateFloatAsState(
         targetValue = if (isInhaling) 1.5f else 0.5f,
@@ -151,87 +158,113 @@ fun BreathingExercise() {
     ) {
         Text(
             text = if (isInhaling) "Inhale..." else "Exhale...",
-            style = MaterialTheme.typography.titleLarge.copy(
-                color = MaterialTheme.colorScheme.primary
-            )
+            style = MaterialTheme.typography.titleLarge.copy(color = textColor)
         )
         Spacer(modifier = Modifier.height(24.dp))
         Box(
             modifier = Modifier
                 .size(180.dp)
                 .graphicsLayer { scaleX = scale; scaleY = scale }
-                .background(Color.Cyan.copy(alpha = 0.5f), CircleShape)
+                .background(Color(0xFFB2DFDB), CircleShape)
                 .shadow(15.dp, CircleShape)
         )
         Spacer(modifier = Modifier.height(24.dp))
         Text(
             text = "Focus on your breathing and stay calm.",
-            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onBackground)
+            style = MaterialTheme.typography.bodyMedium.copy(color = textColor)
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GroundingExercise() {
+fun GroundingExercise(deepGreen: Color) {
     val prompts = listOf(
-        "5 things you can see:",
-        "4 things you can touch:",
-        "3 things you can hear:",
-        "2 things you can smell:",
-        "1 thing you can taste:"
+        "👀  5 things you can see:",
+        "✋  4 things you can touch:",
+        "👂  3 things you can hear:",
+        "👃  2 things you can smell:",
+        "👅  1 thing you can taste:"
     )
     val responses = remember { mutableStateListOf("", "", "", "", "") }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         prompts.forEachIndexed { index, prompt ->
-            Text(
-                text = prompt,
-                style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
-            )
-            OutlinedTextField(
-                value = responses[index],
-                onValueChange = { responses[index] = it },
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
                 shape = RoundedCornerShape(16.dp),
-                colors = TextFieldDefaults.outlinedTextFieldColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFD0F0C0) // calming green tint
                 )
-            )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = prompt,
+                        style = MaterialTheme.typography.titleMedium.copy(color = Color(0xFF2E7D32))
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = responses[index],
+                        onValueChange = { responses[index] = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color(0xFF388E3C),
+                            unfocusedBorderColor = Color(0xFF81C784),
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        )
+                    )
+                }
+            }
         }
     }
 }
-
 @Composable
-fun MuscleRelaxationGuide() {
+fun MuscleRelaxationGuide(deepGreen: Color) {
     val steps = listOf(
-        "Tense your shoulders... hold... now relax.",
-        "Clench your fists... hold... now relax.",
-        "Tighten your stomach... hold... now relax.",
-        "Press your legs together... hold... now relax.",
-        "Scrunch your face... hold... now relax."
+        Pair("🧍‍♀️", "Tense your shoulders... hold... now relax."),
+        Pair("✊", "Clench your fists... hold... now relax."),
+        Pair("🧘", "Tighten your stomach... hold... now relax."),
+        Pair("🦵", "Press your legs together... hold... now relax."),
+        Pair("🙂", "Scrunch your face... hold... now relax.")
     )
 
     Column(modifier = Modifier.fillMaxWidth()) {
-        steps.forEach {
+        steps.forEach { (emoji, text) ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp)
-                    .shadow(8.dp, RoundedCornerShape(16.dp)),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(6.dp)
+                    .padding(vertical = 8.dp),
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(6.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFA5D6A7))
             ) {
-                Text(
-                    text = it,
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Text(
+                        text = emoji,
+                        style = MaterialTheme.typography.headlineSmall,
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodyLarge.copy(color = Color(0xFF1B5E20))
+                    )
+                }
             }
         }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            "Breathe deeply between each step. You're doing great!",
+            style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF2E7D32)),
+            modifier = Modifier.padding(8.dp)
+        )
     }
 }

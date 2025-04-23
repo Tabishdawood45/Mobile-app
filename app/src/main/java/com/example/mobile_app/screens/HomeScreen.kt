@@ -1,32 +1,28 @@
 package com.example.mobile_app.screens
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.unit.dp
-import com.example.mobile_app.components.AppDrawer
-import com.example.mobile_app.components.ReminderCard
-import kotlinx.coroutines.launch
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material.icons.automirrored.filled.NoteAdd
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.mobile_app.auth.AuthManager
+import com.example.mobile_app.components.AppDrawer
 import com.example.mobile_app.ui.theme.AnimatedImageBanner
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(navController: NavController) {
@@ -70,7 +66,6 @@ fun HomeScreen(navController: NavController) {
             },
             containerColor = backgroundGreen
         ) { padding ->
-            // Wrap all content in LazyColumn for full scrolling
             LazyColumn(
                 contentPadding = PaddingValues(
                     top = padding.calculateTopPadding(),
@@ -108,22 +103,25 @@ fun HomeScreen(navController: NavController) {
                     )
                 }
 
-                item {
-                    SectionHeader("Reminders", Icons.Default.Alarm)
-                    ReminderCard(time = "12:00", message = "Don't forget to breathe 🌿")
-                }
+//                item {
+//                    SectionHeader("Reminders", Icons.Default.Alarm)
+//                    ReminderCard(time = "12:00", message = "Don't forget to breathe 🌿")
+//                }
 
                 item {
                     SectionHeader("Tips & Tools", Icons.Default.TipsAndUpdates)
                 }
 
-                // Grid inside LazyColumn
+//                item {
+//                    MoodSelector()
+//                }
+
                 items(1) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(400.dp), // limit height inside scrollable column
+                            .height(400.dp),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
@@ -139,16 +137,15 @@ fun HomeScreen(navController: NavController) {
                             }
                         }
                         item {
-                            QuickAccessButton("Articles",
-                                Icons.AutoMirrored.Filled.Article, cardGreen) {
+                            QuickAccessButton("Articles", Icons.AutoMirrored.Filled.Article, cardGreen) {
                                 navController.navigate("articles_screen")
                             }
                         }
                         item {
-                            QuickAccessButton("Add Note",
-                                Icons.AutoMirrored.Filled.NoteAdd, cardGreen) {
-                                navController.navigate("journal_note_screen")
+                            QuickAccessButton("Mood Tracker", Icons.Default.Mood, cardGreen) {
+                                navController.navigate("mood_tracker_screen")
                             }
+
                         }
                     }
                 }
